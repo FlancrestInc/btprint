@@ -1,9 +1,9 @@
 import unittest
 from unittest import mock
 
-from PIL import ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from text_renderer import TextRenderError, render_text
+from text_renderer import CONTENT_WIDTH, TextRenderError, _wrap_lines, render_text
 
 
 class TextRendererTests(unittest.TestCase):
@@ -30,6 +30,19 @@ class TextRendererTests(unittest.TestCase):
         image = render_text("wideword " * 100, font_size=24, align="left", bold=False)
 
         self.assertGreater(image.height, round(24 * 1.25))
+
+    def test_splits_an_unbroken_overwidth_word_without_losing_characters(self):
+        word = "W" * 100
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 72)
+        draw = ImageDraw.Draw(Image.new("L", (CONTENT_WIDTH, 1)))
+
+        lines = _wrap_lines(word, font, draw)
+
+        self.assertGreater(len(lines), 1)
+        self.assertEqual("".join(lines), word)
+        self.assertTrue(
+            all(draw.textbbox((0, 0), line, font=font)[2] <= CONTENT_WIDTH for line in lines)
+        )
 
     def test_rejects_text_that_would_exceed_4096_rows(self):
         with self.assertRaisesRegex(TextRenderError, "4,096"):

@@ -74,16 +74,32 @@ def _wrap_lines(text, font, draw):
         if not words:
             lines.append("")
             continue
-        line = words[0]
-        for word in words[1:]:
-            candidate = f"{line} {word}"
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}" if line else word
             if _text_width(candidate, font, draw) <= CONTENT_WIDTH:
                 line = candidate
-            else:
+                continue
+            if line:
                 lines.append(line)
-                line = word
+            word_lines = _split_word(word, font, draw)
+            lines.extend(word_lines[:-1])
+            line = word_lines[-1]
         lines.append(line)
     return lines
+
+
+def _split_word(word, font, draw):
+    lines = []
+    line = ""
+    for character in word:
+        candidate = line + character
+        if line and _text_width(candidate, font, draw) > CONTENT_WIDTH:
+            lines.append(line)
+            line = character
+        else:
+            line = candidate
+    return lines + [line]
 
 
 def _text_width(text, font, draw):
