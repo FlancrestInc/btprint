@@ -39,11 +39,17 @@ class PrintService:
             job_id = uuid.uuid4().hex
             self._jobs[job_id] = {"state": "preparing", "error": None}
             self._active_job_id = job_id
-            threading.Thread(
-                target=self._run_job,
-                args=(job_id, prepared_image, mac, interline_feed),
-                daemon=True,
-            ).start()
+            try:
+                thread = threading.Thread(
+                    target=self._run_job,
+                    args=(job_id, prepared_image, mac, interline_feed),
+                    daemon=True,
+                )
+                thread.start()
+            except Exception as error:
+                self._jobs.pop(job_id, None)
+                self._active_job_id = None
+                raise PrintServiceError("Could not start print job.") from error
         return job_id
 
     def get(self, job_id) -> dict:

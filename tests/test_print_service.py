@@ -1,6 +1,7 @@
 import threading
 import time
 import unittest
+from unittest import mock
 
 from PIL import Image
 
@@ -162,6 +163,55 @@ class PrintServiceTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             service.get(job_ids[0])
         self.assertEqual(service.get(job_ids[-1])["state"], "complete")
+
+    def test_thread_start_failure_rolls_back_the_active_job(self):
+        service = PrintService(
+            session_factory=lambda mac: FakeSession(),
+            frame_builder=lambda image, *, interline_feed: [],
+        )
+
+        with mock.patch("print_service.threading.Thread") as thread:
+            thread.return_value.start.side_effect = RuntimeError("thread unavailable")
+            with self.assertRaises(PrintServiceError):
+                service.start(self.prepared())
+
+        job_id = service.start(self.prepared())
+        self.assertEqual(self.wait_for_terminal(service, job_id)["state"], "complete")
+
+    def test_job_reports_printing_while_frame_builder_is_running(self):
+        entered = threading.Event()
+        release = threading.Event()
+
+        def build_frames(image, *, interline_feed):
+            entered.set()
+            release.wait(timeout=1)
+            return []
+
+        service = PrintService(
+            session_factory=lambda mac: FakeSession(),
+            frame_builder=build_frames,
+        )
+        job_id = service.start(self.prepared())
+
+        self.assertTrue(entered.wait(timeout=1))
+        self.assertEqual(service.get(job_id)["state"], "printing")
+        release.set()
+        self.assertEqual(self.wait_for_terminal(service, job_id)["state"], "complete")
+
+    def test_frame_builder_and_session_factory_failures_clear_active_job(self):
+        for factory, builder in (
+            (lambda mac: FakeSession(), mock.Mock(side_effect=(RuntimeError(), []))),
+            (mock.Mock(side_effect=(RuntimeError(), FakeSession())), lambda image, *, interline_feed: []),
+        ):
+            with self.subTest(factory=factory, builder=builder):
+                service = PrintService(session_factory=factory, frame_builder=builder)
+                with self.assertLogs("print_service", level="ERROR"):
+                    job_id = service.start(self.prepared())
+                    job = self.wait_for_terminal(service, job_id)
+                self.assertEqual(job["error"], "Printing failed; see the server log.")
+
+                next_job_id = service.start(self.prepared())
+                self.assertEqual(self.wait_for_terminal(service, next_job_id)["state"], "complete")
 
 
 if __name__ == "__main__":
