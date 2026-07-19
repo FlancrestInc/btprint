@@ -3,7 +3,7 @@ from unittest import mock
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from text_renderer import CONTENT_WIDTH, TextRenderError, _wrap_lines, render_text
+from text_renderer import BOLD_FONT, CONTENT_WIDTH, TextRenderError, _wrap_lines, render_text
 
 
 class TextRendererTests(unittest.TestCase):
@@ -13,6 +13,19 @@ class TextRendererTests(unittest.TestCase):
         self.assertEqual(image.mode, "L")
         self.assertEqual(image.width, 380)
         self.assertGreater(image.height, 0)
+
+    def test_renders_white_background_with_black_ink(self):
+        image = render_text("X", font_size=24, align="left", bold=False)
+
+        self.assertEqual(max(image.getdata()), 255)
+        self.assertEqual(min(image.getdata()), 0)
+
+    def test_uses_the_bold_font_when_requested(self):
+        font = ImageFont.truetype(str(BOLD_FONT), 24)
+        with mock.patch("text_renderer.ImageFont.truetype", return_value=font) as truetype:
+            render_text("Hello", font_size=24, align="left", bold=True)
+
+        truetype.assert_called_once_with(str(BOLD_FONT), 24)
 
     def test_rejects_blank_and_overlong_text(self):
         with self.assertRaisesRegex(TextRenderError, "text"):
@@ -41,7 +54,12 @@ class TextRendererTests(unittest.TestCase):
         self.assertGreater(len(lines), 1)
         self.assertEqual("".join(lines), word)
         self.assertTrue(
-            all(draw.textbbox((0, 0), line, font=font)[2] <= CONTENT_WIDTH for line in lines)
+            all(
+                draw.textbbox((0, 0), line, font=font)[2]
+                - draw.textbbox((0, 0), line, font=font)[0]
+                <= CONTENT_WIDTH
+                for line in lines
+            )
         )
 
     def test_rejects_text_that_would_exceed_4096_rows(self):
