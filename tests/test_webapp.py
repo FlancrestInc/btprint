@@ -102,6 +102,26 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.get_json())
 
+    def test_exactly_ten_mebibyte_image_upload_is_allowed_past_multipart_overhead(self):
+        stream = io.BytesIO()
+        Image.new("L", (10, 10), "white").save(stream, "PNG")
+        payload = stream.getvalue()
+        upload = io.BytesIO(payload + b"\0" * (10 * 1024 * 1024 - len(payload)))
+
+        response = self.client.post(
+            "/preview", data={"source_type": "image", "image": (upload, "exact.png")}
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_upload_larger_than_ten_mebibytes_returns_json_400(self):
+        response = self.client.post(
+            "/preview",
+            data={"source_type": "image", "image": (io.BytesIO(b"x" * (10 * 1024 * 1024 + 1)), "large.png")},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json(), {"error": "Upload must not exceed 10 MiB."})
+
     def test_image_source_requires_valid_upload(self):
         missing = self.client.post("/preview", data={"source_type": "image"})
         invalid = self.client.post(
@@ -144,6 +164,12 @@ class WebAppTests(unittest.TestCase):
     def test_print_rejects_prepared_height_above_limit(self):
         with mock.patch("webapp.prepare_ble_image", return_value=Image.new("1", (384, 2049), 1)):
             response = self.client.post("/print", data=valid_text_form())
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("error", response.get_json())
+
+    def test_preview_rejects_prepared_height_above_limit(self):
+        with mock.patch("webapp.prepare_ble_image", return_value=Image.new("1", (384, 2049), 1)):
+            response = self.client.post("/preview", data=valid_text_form())
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.get_json())
 

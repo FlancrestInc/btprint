@@ -14,6 +14,7 @@ from text_renderer import TextRenderError, render_text
 
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_MULTIPART_OVERHEAD = 1024 * 1024
 MAX_DECODED_PIXELS = 12_000_000
 MAX_PREPARED_ROWS = 2_048
 _MAC_ADDRESS = re.compile(r"[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}")
@@ -26,7 +27,9 @@ class RequestError(ValueError):
 def create_app(*, print_service=None, upload_tempdir=None):
     """Create the local web app, optionally using a supplied print service."""
     app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+    # Flask measures the whole multipart request. Leave room for form fields and
+    # boundaries; _read_uploaded_image enforces the actual file-byte limit.
+    app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD
     service = print_service if print_service is not None else PrintService()
 
     @app.errorhandler(RequestEntityTooLarge)
@@ -53,8 +56,6 @@ def create_app(*, print_service=None, upload_tempdir=None):
     @app.post("/print")
     def print_job():
         prepared, settings = _prepared_and_settings(app, upload_tempdir)
-        if prepared.height > MAX_PREPARED_ROWS:
-            raise RequestError("prepared image must not exceed 2,048 rows")
         try:
             job_id = service.start(
                 prepared, mac=settings["mac"], interline_feed=settings["interline_feed"]
@@ -90,6 +91,8 @@ def _prepared_and_settings(app, upload_tempdir):
     except Exception:
         app.logger.exception("Could not prepare print image")
         return _raise_preparation_failure()
+    if prepared.height > MAX_PREPARED_ROWS:
+        raise RequestError("prepared image must not exceed 2,048 rows")
     return prepared, settings
 
 
@@ -167,7 +170,7 @@ def _read_uploaded_image(upload_tempdir):
     try:
         with tempfile.TemporaryDirectory(dir=upload_tempdir) as directory:
             path = f"{directory}/upload"
-            upload.save(path)
+            _save_upload_with_limit(upload.stream, path)
             with Image.open(path) as image:
                 image.verify()
             with Image.open(path) as image:
@@ -178,6 +181,16 @@ def _read_uploaded_image(upload_tempdir):
         raise
     except (OSError, UnidentifiedImageError, Image.DecompressionBombError) as error:
         raise RequestError("image upload must be readable by Pillow") from error
+
+
+def _save_upload_with_limit(stream, path):
+    total = 0
+    with open(path, "wb") as destination:
+        while chunk := stream.read(64 * 1024):
+            total += len(chunk)
+            if total > MAX_UPLOAD_BYTES:
+                raise RequestError("Upload must not exceed 10 MiB.")
+            destination.write(chunk)
 
 
 def _error_response(message, status):
