@@ -18,3 +18,6 @@ dist/
 *.pklg
 *.heic
 gemini.png
+
+# Local Git worktrees
+.worktrees/
