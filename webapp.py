@@ -1,11 +1,13 @@
 """Local-only Flask endpoints for previewing and printing CTP500 jobs."""
 
 import io
+import hmac
 import re
+import secrets
 import tempfile
 
-from flask import Flask, jsonify, request, send_file
-from werkzeug.exceptions import RequestEntityTooLarge
+from flask import Flask, jsonify, request, send_file, session
+from werkzeug.exceptions import Forbidden, RequestEntityTooLarge
 from PIL import Image, UnidentifiedImageError
 
 from ctp500_ble import prepare_ble_image
@@ -27,6 +29,7 @@ class RequestError(ValueError):
 def create_app(*, print_service=None, upload_tempdir=None):
     """Create the local web app, optionally using a supplied print service."""
     app = Flask(__name__)
+    app.config["SECRET_KEY"] = secrets.token_bytes(32)
     # Flask measures the whole multipart request. Leave room for form fields and
     # boundaries; _read_uploaded_image enforces the actual file-byte limit.
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD
@@ -35,6 +38,10 @@ def create_app(*, print_service=None, upload_tempdir=None):
     @app.errorhandler(RequestEntityTooLarge)
     def request_too_large(_error):
         return _error_response("Upload must not exceed 10 MiB.", 400)
+
+    @app.errorhandler(Forbidden)
+    def forbidden(_error):
+        return _error_response("Forbidden.", 403)
 
     @app.errorhandler(_PreparationFailure)
     def preparation_failure(_error):
@@ -45,8 +52,17 @@ def create_app(*, print_service=None, upload_tempdir=None):
     def invalid_request(error):
         return _error_response(str(error), 400)
 
+    @app.get("/csrf-token")
+    def csrf_token():
+        token = session.get("csrf_token")
+        if token is None:
+            token = secrets.token_urlsafe(32)
+            session["csrf_token"] = token
+        return jsonify(csrf_token=token)
+
     @app.post("/preview")
     def preview():
+        _validate_csrf_request()
         prepared = _prepared_from_request(app, upload_tempdir)
         output = io.BytesIO()
         prepared.save(output, format="PNG")
@@ -55,6 +71,7 @@ def create_app(*, print_service=None, upload_tempdir=None):
 
     @app.post("/print")
     def print_job():
+        _validate_csrf_request()
         prepared, settings = _prepared_and_settings(app, upload_tempdir)
         try:
             job_id = service.start(
@@ -63,7 +80,8 @@ def create_app(*, print_service=None, upload_tempdir=None):
         except PrintServiceError as error:
             if str(error) == "A print job is already in progress.":
                 return _error_response(str(error), 409)
-            raise RequestError(str(error)) from error
+            app.logger.exception("Could not start print job")
+            return _error_response("Could not start print job.", 500)
         return jsonify(job_id=job_id), 202
 
     @app.get("/jobs/<job_id>")
@@ -78,6 +96,24 @@ def create_app(*, print_service=None, upload_tempdir=None):
 
 def _prepared_from_request(app, upload_tempdir):
     return _prepared_and_settings(app, upload_tempdir)[0]
+
+
+def _validate_csrf_request():
+    origin = request.headers.get("Origin")
+    expected_origin = request.host_url.rstrip("/")
+    token = request.headers.get("X-CSRF-Token")
+    expected_token = session.get("csrf_token")
+    if (
+        origin != expected_origin
+        or not isinstance(token, str)
+        or not isinstance(expected_token, str)
+        or not hmac.compare_digest(token, expected_token)
+    ):
+        return _reject_csrf_request()
+
+
+def _reject_csrf_request():
+    raise Forbidden()
 
 
 def _prepared_and_settings(app, upload_tempdir):

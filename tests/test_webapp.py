@@ -25,10 +25,13 @@ def valid_text_form(**overrides):
 class FakePrintService:
     def __init__(self):
         self.busy = False
+        self.start_error = None
         self.jobs = {}
         self.started = []
 
     def start(self, prepared, *, mac, interline_feed):
+        if self.start_error is not None:
+            raise self.start_error
         if self.busy:
             raise PrintServiceError("A print job is already in progress.")
         self.busy = True
@@ -49,6 +52,11 @@ class WebAppTests(unittest.TestCase):
         self.tempdir = tempfile.TemporaryDirectory()
         self.app = create_app(print_service=self.service, upload_tempdir=self.tempdir.name)
         self.client = self.app.test_client()
+        token = self.client.get("/csrf-token").get_json()["csrf_token"]
+        self.client.environ_base.update({
+            "HTTP_ORIGIN": "http://localhost",
+            "HTTP_X_CSRF_TOKEN": token,
+        })
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -74,6 +82,36 @@ class WebAppTests(unittest.TestCase):
         response = self.client.post("/print", data=valid_text_form())
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.get_json(), {"error": "A print job is already in progress."})
+
+    def test_unexpected_print_start_error_is_logged_and_returns_safe_500(self):
+        self.service.start_error = PrintServiceError("Could not start print job.")
+        with mock.patch.object(self.app.logger, "exception") as log:
+            response = self.client.post("/print", data=valid_text_form())
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.get_json(), {"error": "Could not start print job."})
+        log.assert_called_once()
+
+    def test_post_rejects_missing_csrf_token_or_foreign_origin(self):
+        missing_token = self.client.post(
+            "/preview", data=valid_text_form(), headers={"X-CSRF-Token": ""}
+        )
+        missing_origin = self.client.post(
+            "/preview", data=valid_text_form(), headers={"Origin": ""}
+        )
+        foreign_origin = self.client.post(
+            "/preview", data=valid_text_form(),
+            headers={"Origin": "http://evil.example", "X-CSRF-Token": "invalid"},
+        )
+        self.assertEqual(missing_token.status_code, 403)
+        self.assertEqual(missing_origin.status_code, 403)
+        self.assertEqual(foreign_origin.status_code, 403)
+        self.assertEqual(missing_token.get_json(), {"error": "Forbidden."})
+        self.assertEqual(missing_origin.get_json(), {"error": "Forbidden."})
+        self.assertEqual(foreign_origin.get_json(), {"error": "Forbidden."})
+
+    def test_csrf_token_allows_local_ui_post(self):
+        response = self.client.post("/preview", data=valid_text_form())
+        self.assertEqual(response.status_code, 200)
 
     def test_job_lookup_and_unknown_job_statuses(self):
         self.service.jobs["job-1"] = {"state": "printing", "error": None}
@@ -188,8 +226,12 @@ class WebAppTests(unittest.TestCase):
 
         def post_print():
             client = app.test_client()
+            token = client.get("/csrf-token").get_json()["csrf_token"]
             barrier.wait()
-            statuses.append(client.post("/print", data=valid_text_form()).status_code)
+            statuses.append(client.post(
+                "/print", data=valid_text_form(),
+                headers={"Origin": "http://localhost", "X-CSRF-Token": token},
+            ).status_code)
 
         threads = [threading.Thread(target=post_print) for _ in range(2)]
         for thread in threads:
