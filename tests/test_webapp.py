@@ -113,6 +113,19 @@ class WebAppTests(unittest.TestCase):
         response = self.client.post("/preview", data=valid_text_form())
         self.assertEqual(response.status_code, 200)
 
+    def test_index_serves_the_local_print_interface(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        for element_id in (
+            "printer-address", "source-image", "source-text", "image-file",
+            "image-filename", "dither", "text-input", "font-size", "alignment",
+            "bold", "preview", "print-button", "status", "advanced-settings",
+        ):
+            with self.subTest(element_id=element_id):
+                self.assertIn(f'id="{element_id}"', page)
+        self.assertIn('src="/static/app.mjs"', page)
+
     def test_job_lookup_and_unknown_job_statuses(self):
         self.service.jobs["job-1"] = {"state": "printing", "error": None}
         self.assertEqual(self.client.get("/jobs/job-1").get_json()["state"], "printing")

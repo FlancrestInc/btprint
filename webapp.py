@@ -6,7 +6,7 @@ import re
 import secrets
 import tempfile
 
-from flask import Flask, jsonify, request, send_file, session
+from flask import Flask, jsonify, render_template, request, send_file, session
 from werkzeug.exceptions import Forbidden, RequestEntityTooLarge
 from PIL import Image, UnidentifiedImageError
 
@@ -28,12 +28,16 @@ class RequestError(ValueError):
 
 def create_app(*, print_service=None, upload_tempdir=None):
     """Create the local web app, optionally using a supplied print service."""
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
     app.config["SECRET_KEY"] = secrets.token_bytes(32)
     # Flask measures the whole multipart request. Leave room for form fields and
     # boundaries; _read_uploaded_image enforces the actual file-byte limit.
     app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD
     service = print_service if print_service is not None else PrintService()
+
+    @app.get("/")
+    def index():
+        return render_template("index.html", default_mac=DEFAULT_MAC)
 
     @app.errorhandler(RequestEntityTooLarge)
     def request_too_large(_error):
