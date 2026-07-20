@@ -20,6 +20,37 @@ This host uses adapter `hci0`, the printer's public BLE MAC address, and no
 pairing. Printing connects directly to the address; there is no RFCOMM channel,
 `bluetoothctl` paired-device lookup, or PyBluez dependency.
 
+## Local web app
+
+Install the web-app dependencies:
+
+```bash
+python3 -m pip install --user -r requirements.txt
+```
+
+Start the local server:
+
+```bash
+python3 webapp.py
+```
+
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) on the same machine. The
+app listens only on this local address; it is not reachable from other devices
+on the network.
+
+Choose **Image** to upload a Pillow-readable image, or choose **Text** to type
+a short receipt. Use the preview before printing. Image dithering is available
+for photos. Text can use a 12–72 px font, left/center/right alignment, and bold
+weight.
+
+The default printer address is `20:DC:8B:CD:CA:C0`. The default calibration is
+one interline feed step and a `0.5` vertical scale. Change these values in
+**Advanced settings** only when tuning a different printer or paper.
+
+The app allows one print job at a time. Once Bluetooth sending begins, that job
+cannot be cancelled; wait for it to finish or report a Bluetooth error before
+starting another job.
+
 ## Print an image
 
 Print directly to the printer BLE address:
