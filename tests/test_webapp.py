@@ -127,6 +127,8 @@ class WebAppTests(unittest.TestCase):
         advanced_start = page.index('id="advanced-settings"')
         advanced_end = page.index("</details>", advanced_start)
         self.assertIn('id="printer-address"', page[advanced_start:advanced_end])
+        self.assertIn('id="printer-target"', page)
+        self.assertIn('>20:DC:8B:CD:CA:C0<', page)
         self.assertIn('src="/static/app.mjs"', page)
 
     def test_job_lookup_and_unknown_job_statuses(self):

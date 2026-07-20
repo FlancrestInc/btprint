@@ -90,3 +90,29 @@ test("print submits explicit boolean settings", async () => {
   await controller.print();
   assert.deepEqual(body.values, { dither: "true", bold: "false" });
 });
+
+test("boot mirrors the printer address into the header target", async () => {
+  const originalDocument = globalThis.document;
+  const originalFetch = globalThis.fetch;
+  const input = { value: "20:DC:8B:CD:CA:C0", addEventListener(type, callback) { this.oninput = callback; } };
+  const target = { textContent: "" };
+  const form = { addEventListener() {} };
+  const controls = {
+    "#print-form": form, "#printer-address": input, "#printer-target": target,
+    "#image-controls": { hidden: false, querySelectorAll: () => [] },
+    "#text-controls": { hidden: true, querySelectorAll: () => [] },
+    "#image-file": { files: [] }, "#image-filename": { textContent: "" },
+    "#source-image": { checked: true }, "#preview": {}, "#print-button": {},
+    "#status": { dataset: {} }, "#dither": { checked: false }, "#bold": { checked: false },
+  };
+  globalThis.document = { querySelector: (selector) => controls[selector] };
+  globalThis.fetch = async () => response();
+  await import(`../web/static/app.mjs?boot=${Date.now()}`);
+
+  assert.equal(target.textContent, "20:DC:8B:CD:CA:C0");
+  input.value = "AA:BB:CC:DD:EE:FF";
+  input.oninput();
+  assert.equal(target.textContent, "AA:BB:CC:DD:EE:FF");
+  globalThis.document = originalDocument;
+  globalThis.fetch = originalFetch;
+});

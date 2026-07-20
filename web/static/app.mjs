@@ -110,6 +110,8 @@ function boot() {
   const imageFile = document.querySelector("#image-file");
   const imageFilename = document.querySelector("#image-filename");
   const sourceImage = document.querySelector("#source-image");
+  const printerAddress = document.querySelector("#printer-address");
+  const printerTarget = document.querySelector("#printer-target");
   const controller = createPrintController({ form, preview: document.querySelector("#preview"), printButton: document.querySelector("#print-button"), status: document.querySelector("#status"), dither: document.querySelector("#dither"), bold: document.querySelector("#bold") });
 
   const showSource = () => {
@@ -126,6 +128,9 @@ function boot() {
   });
   form.addEventListener("input", controller.schedulePreview);
   form.addEventListener("submit", (event) => { event.preventDefault(); controller.print(); });
+  const syncPrinterTarget = () => { printerTarget.textContent = printerAddress.value; };
+  printerAddress.addEventListener("input", syncPrinterTarget);
+  syncPrinterTarget();
   showSource();
 }
 
