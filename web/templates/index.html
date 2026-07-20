@@ -16,9 +16,6 @@
 
       <form id="print-form" novalidate>
         <section class="settings" aria-label="Print settings">
-          <label for="printer-address">Printer address</label>
-          <input id="printer-address" name="mac" value="{{ default_mac }}" autocomplete="off" spellcheck="false">
-
           <fieldset class="source-picker">
             <legend>Source</legend>
             <label><input id="source-image" type="radio" name="source_type" value="image" checked> Image</label>
@@ -47,6 +44,8 @@
           <details id="advanced-settings">
             <summary>Advanced settings</summary>
             <div class="advanced-grid">
+              <label for="printer-address">Printer address</label>
+              <input id="printer-address" name="mac" value="{{ default_mac }}" autocomplete="off" spellcheck="false">
               <label for="interline-feed">Interline feed</label>
               <input id="interline-feed" name="interline_feed" type="number" min="1" max="8" value="1">
               <label for="vertical-scale">Vertical scale</label>
