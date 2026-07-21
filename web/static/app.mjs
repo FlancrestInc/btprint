@@ -24,6 +24,8 @@ export function createPrintController({
   const setStatus = (message, kind = "info") => {
     status.textContent = message;
     status.dataset.kind = kind;
+    status.classList.toggle("ds-status--success", kind === "success");
+    status.classList.toggle("ds-status--error", kind === "error");
   };
 
   async function token() {

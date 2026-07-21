@@ -1,22 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-ds-theme="win31">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Local Receipt Print</title>
+    <link rel="stylesheet" href="/static/win31/win31-core.css">
     <link rel="stylesheet" href="/static/app.css">
   </head>
   <body>
-    <main class="utility-shell">
-      <header>
-        <p class="eyebrow">CTP500 · LOCAL QUEUE</p>
-        <h1>Receipt print</h1>
+    <main class="ds-app-shell utility-shell">
+      <section class="ds-window">
+        <header class="ds-titlebar"><span>CTP500 Receipt Print</span><span class="printer-target">Target <output id="printer-target">{{ default_mac }}</output></span></header>
+        <div class="ds-window__body">
         <p class="lede">Prepare a 384-pixel thermal receipt, then send it to the paired printer.</p>
-        <p class="printer-target">Target <output id="printer-target">{{ default_mac }}</output></p>
-      </header>
 
       <form id="print-form" novalidate>
-        <section class="settings" aria-label="Print settings">
+        <section class="settings ds-panel" aria-label="Print settings">
           <fieldset class="source-picker">
             <legend>Source</legend>
             <label><input id="source-image" type="radio" name="source_type" value="image" checked> Image</label>
@@ -24,20 +23,18 @@
           </fieldset>
 
           <div id="image-controls" class="source-controls">
-            <label for="image-file">Image file</label>
-            <input id="image-file" name="image" type="file" accept="image/*">
+            <label class="ds-field" for="image-file">Image file <input class="ds-control" id="image-file" name="image" type="file" accept="image/*"></label>
             <p id="image-filename" class="file-name">No file selected</p>
             <label class="check"><input id="dither" name="dither" type="checkbox"> Dither image</label>
           </div>
 
           <div id="text-controls" class="source-controls" hidden>
-            <label for="text-input">Receipt text</label>
-            <textarea id="text-input" name="text" rows="8" placeholder="Type a receipt…"></textarea>
+            <label class="ds-field" for="text-input">Receipt text <textarea class="ds-control" id="text-input" name="text" rows="8" placeholder="Type a receipt…"></textarea></label>
             <div class="text-options">
               <label for="font-size">Font size</label>
-              <input id="font-size" name="font_size" type="number" min="12" max="72" value="24">
+              <input class="ds-control" id="font-size" name="font_size" type="number" min="12" max="72" value="24">
               <label for="alignment">Align</label>
-              <select id="alignment" name="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+              <select class="ds-control" id="alignment" name="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
               <label class="check"><input id="bold" name="bold" type="checkbox"> Bold</label>
             </div>
           </div>
@@ -46,22 +43,24 @@
             <summary>Advanced settings</summary>
             <div class="advanced-grid">
               <label for="printer-address">Printer address</label>
-              <input id="printer-address" name="mac" value="{{ default_mac }}" autocomplete="off" spellcheck="false">
+              <input class="ds-control" id="printer-address" name="mac" value="{{ default_mac }}" autocomplete="off" spellcheck="false">
               <label for="interline-feed">Interline feed</label>
-              <input id="interline-feed" name="interline_feed" type="number" min="1" max="8" value="1">
+              <input class="ds-control" id="interline-feed" name="interline_feed" type="number" min="1" max="8" value="1">
               <label for="vertical-scale">Vertical scale</label>
-              <input id="vertical-scale" name="vertical_scale" type="number" min="0.25" max="2" step="0.25" value="0.5">
+              <input class="ds-control" id="vertical-scale" name="vertical_scale" type="number" min="0.25" max="2" step="0.25" value="0.5">
             </div>
           </details>
         </section>
 
-        <section class="receipt-panel" aria-label="Receipt preview">
+        <section class="receipt-panel ds-panel" aria-label="Receipt preview">
           <div class="receipt-heading"><p class="eyebrow">LIVE OUTPUT</p><span>384 px</span></div>
-          <div class="receipt-frame"><img id="preview" alt="Prepared receipt preview" hidden></div>
-          <p id="status" role="status" aria-live="polite">Choose an image or enter receipt text.</p>
-          <button id="print-button" type="submit">Print receipt</button>
+          <div class="receipt-frame ds-panel--sunken"><img id="preview" alt="Prepared receipt preview" hidden></div>
+          <p id="status" class="ds-status" role="status" aria-live="polite">Choose an image or enter receipt text.</p>
+          <button id="print-button" class="ds-button ds-button--primary" type="submit">Print receipt</button>
         </section>
       </form>
+        </div>
+      </section>
     </main>
     <script type="module" src="/static/app.mjs"></script>
   </body>

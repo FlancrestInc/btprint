@@ -12,7 +12,7 @@ function makeUi() {
     form: {},
     preview: { src: "old-preview", hidden: false },
     printButton: { disabled: false },
-    status: { textContent: "", dataset: {} },
+    status: { textContent: "", dataset: {}, classList: { toggle() {} } },
   };
 }
 

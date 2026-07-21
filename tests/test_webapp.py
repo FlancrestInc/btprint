@@ -139,6 +139,17 @@ class WebAppTests(unittest.TestCase):
         self.assertIn('>20:DC:8B:CD:CA:C0<', page)
         self.assertIn('src="/static/app.mjs"', page)
 
+    def test_index_uses_the_local_win31_theme_structure(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('data-ds-theme="win31"', page)
+        self.assertIn('href="/static/win31/win31-core.css"', page)
+        for class_name in (
+            "ds-app-shell", "ds-window", "ds-titlebar", "ds-panel",
+            "ds-panel--sunken", "ds-control", "ds-button--primary", "ds-status",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, page)
+
     def test_job_lookup_and_unknown_job_statuses(self):
         self.service.jobs["job-1"] = {"state": "printing", "error": None}
         self.assertEqual(self.client.get("/jobs/job-1").get_json()["state"], "printing")
