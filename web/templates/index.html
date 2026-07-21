@@ -31,9 +31,9 @@
           <div id="text-controls" class="source-controls" hidden>
             <label class="ds-field" for="text-input">Receipt text <textarea class="ds-control" id="text-input" name="text" rows="8" placeholder="Type a receipt…"></textarea></label>
             <div class="text-options">
-              <label for="font-size">Font size</label>
+              <label class="ds-field" for="font-size">Font size</label>
               <input class="ds-control" id="font-size" name="font_size" type="number" min="12" max="72" value="24">
-              <label for="alignment">Align</label>
+              <label class="ds-field" for="alignment">Align</label>
               <select class="ds-control" id="alignment" name="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
               <label class="check"><input id="bold" name="bold" type="checkbox"> Bold</label>
             </div>
@@ -42,11 +42,11 @@
           <details id="advanced-settings">
             <summary>Advanced settings</summary>
             <div class="advanced-grid">
-              <label for="printer-address">Printer address</label>
+              <label class="ds-field" for="printer-address">Printer address</label>
               <input class="ds-control" id="printer-address" name="mac" value="{{ default_mac }}" autocomplete="off" spellcheck="false">
-              <label for="interline-feed">Interline feed</label>
+              <label class="ds-field" for="interline-feed">Interline feed</label>
               <input class="ds-control" id="interline-feed" name="interline_feed" type="number" min="1" max="8" value="1">
-              <label for="vertical-scale">Vertical scale</label>
+              <label class="ds-field" for="vertical-scale">Vertical scale</label>
               <input class="ds-control" id="vertical-scale" name="vertical_scale" type="number" min="0.25" max="2" step="0.25" value="0.5">
             </div>
           </details>

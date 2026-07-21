@@ -1,4 +1,6 @@
 import io
+import hashlib
+import json
 import tempfile
 import threading
 import unittest
@@ -149,6 +151,16 @@ class WebAppTests(unittest.TestCase):
         ):
             with self.subTest(class_name=class_name):
                 self.assertIn(class_name, page)
+
+    def test_vendored_win31_core_matches_its_recorded_provenance(self):
+        static_root = Path(__file__).resolve().parents[1] / "web" / "static" / "win31"
+        provenance = json.loads((static_root / "win31-core.provenance.json").read_text())
+        stylesheet = static_root / "win31-core.css"
+        self.assertEqual(provenance["package"], "@flancrestinc/win31-core")
+        self.assertEqual(provenance["version"], "0.1.0")
+        self.assertEqual(
+            hashlib.sha256(stylesheet.read_bytes()).hexdigest(), provenance["sha256"]
+        )
 
     def test_job_lookup_and_unknown_job_statuses(self):
         self.service.jobs["job-1"] = {"state": "printing", "error": None}
