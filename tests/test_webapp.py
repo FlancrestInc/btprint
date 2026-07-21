@@ -68,6 +68,14 @@ class WebAppTests(unittest.TestCase):
         image = Image.open(io.BytesIO(response.data))
         self.assertEqual(image.mode, "1")
 
+    def test_preview_expands_the_calibrated_vertical_scale_for_display_only(self):
+        prepared = Image.new("1", (384, 100), 1)
+        with mock.patch("webapp.prepare_ble_image", return_value=prepared):
+            response = self.client.post("/preview", data=valid_text_form(vertical_scale="0.5"))
+
+        image = Image.open(io.BytesIO(response.data))
+        self.assertEqual(image.size, (384, 200))
+
     def test_print_returns_202_and_passes_prepared_image_to_service(self):
         response = self.client.post("/print", data=valid_text_form(interline_feed="3"))
         self.assertEqual(response.status_code, 202)

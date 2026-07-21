@@ -67,7 +67,8 @@ def create_app(*, print_service=None, upload_tempdir=None):
     @app.post("/preview")
     def preview():
         _validate_csrf_request()
-        prepared = _prepared_from_request(app, upload_tempdir)
+        prepared, settings = _prepared_and_settings(app, upload_tempdir)
+        prepared = _display_preview(prepared, settings["vertical_scale"])
         output = io.BytesIO()
         prepared.save(output, format="PNG")
         output.seek(0)
@@ -100,6 +101,14 @@ def create_app(*, print_service=None, upload_tempdir=None):
 
 def _prepared_from_request(app, upload_tempdir):
     return _prepared_and_settings(app, upload_tempdir)[0]
+
+
+def _display_preview(prepared, vertical_scale):
+    """Expand calibrated raster rows to match their physical paper height."""
+    height = max(1, round(prepared.height / vertical_scale))
+    if height == prepared.height:
+        return prepared
+    return prepared.resize((prepared.width, height), Image.NEAREST)
 
 
 def _validate_csrf_request():
