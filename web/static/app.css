@@ -6,6 +6,12 @@
 .lede { margin: 0 0 var(--ds-space-400); color: var(--ds-text-secondary); font-size: var(--ds-font-size-caption); }
 form { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(22rem, 1.1fr); gap: var(--ds-space-500); align-items: start; }
 .settings, .receipt-panel { display: grid; gap: var(--ds-space-300); }
+.template-picker { display: grid; gap: var(--ds-space-200); }
+.template-picker__heading { display: flex; justify-content: space-between; gap: var(--ds-space-300); align-items: baseline; }
+.template-picker h2 { margin: 0; font-size: var(--ds-font-size-caption); }
+.template-picker__heading p { margin: 0; color: var(--ds-text-secondary); font-size: var(--ds-font-size-caption); text-align: right; }
+.template-picker__controls { display: flex; flex-wrap: wrap; gap: var(--ds-space-200); }
+.template-picker__controls [aria-pressed="true"] { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
 .source-picker { display: flex; gap: var(--ds-space-400); padding: var(--ds-space-300); border: 1px solid var(--ds-border-strong); }
 .source-picker legend { padding-inline: var(--ds-space-100); font-size: var(--ds-font-size-caption); font-weight: 700; }
 .source-picker label, .check { display: flex; align-items: center; gap: var(--ds-space-100); }
