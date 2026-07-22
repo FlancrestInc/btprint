@@ -43,6 +43,14 @@ a short receipt. Use the preview before printing. Image dithering is available
 for photos. Text can use a 12–72 px font, left/center/right alignment, and bold
 weight.
 
+### Text templates
+
+The text view starts on **Custom**. It also has four built-in local presets:
+**Checklist**, **To-do label**, **Tiny note card**, and **Surprise mini-card**.
+Choose one to switch to Text and fill the normal text, size, alignment, and
+bold controls. The preset is only a starting point: edit any of those fields
+before printing. Preview and print use the same normal path as custom text.
+
 The default printer address is `20:DC:8B:CD:CA:C0`. The default calibration is
 one interline feed step and a `0.5` vertical scale. Change these values in
 **Advanced settings** only when tuning a different printer or paper.
