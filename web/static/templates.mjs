@@ -3,6 +3,7 @@ export const CUSTOM_TEMPLATE_ID = "custom";
 export const TEMPLATES = [
   {
     id: "checklist",
+    title: "Checklist",
     text: "CHECKLIST\n[ ] First task\n[ ] Second task\n[ ] Done",
     fontSize: 24,
     alignment: "left",
@@ -11,6 +12,7 @@ export const TEMPLATES = [
   },
   {
     id: "todo-label",
+    title: "To-do label",
     text: "TO DO\nWhat needs doing?",
     fontSize: 32,
     alignment: "center",
@@ -19,6 +21,7 @@ export const TEMPLATES = [
   },
   {
     id: "tiny-note",
+    title: "Tiny note card",
     text: "A tiny note for you.",
     fontSize: 24,
     alignment: "left",
@@ -27,6 +30,7 @@ export const TEMPLATES = [
   },
   {
     id: "surprise-card",
+    title: "Surprise mini-card",
     text: "SURPRISE!\nYou are doing great.",
     fontSize: 28,
     alignment: "center",
