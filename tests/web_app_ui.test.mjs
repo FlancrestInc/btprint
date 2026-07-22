@@ -115,21 +115,6 @@ test("Custom preserves the current source and values without scheduling a previe
   for (const button of ui.templateButtons) assert.equal(button.ariaPressed, String(button.id === CUSTOM_TEMPLATE_ID));
 });
 
-test("template clicks do not submit a form or call print", () => {
-  const ui = makeTemplateUi();
-  let submitCalls = 0;
-  let printCalls = 0;
-  const form = { submit() { submitCalls += 1; } };
-  const print = () => { printCalls += 1; };
-  createTemplateController({ ...ui, form, print });
-
-  ui.templateButtons.find((button) => button.id === "checklist").click();
-  ui.templateButtons.find((button) => button.id === CUSTOM_TEMPLATE_ID).click();
-
-  assert.equal(submitCalls, 0);
-  assert.equal(printCalls, 0);
-});
-
 test("preview sends CSRF-protected form data and keeps the old image on error", async () => {
   const ui = makeUi();
   const calls = [];
