@@ -141,6 +141,32 @@ class WebAppTests(unittest.TestCase):
         self.assertIn('>20:DC:8B:CD:CA:C0<', page)
         self.assertIn('src="/static/app.mjs"', page)
 
+    def test_index_exposes_editable_template_picker_before_source_picker(self):
+        page = self.client.get("/").get_data(as_text=True)
+        self.assertIn('class="template-picker ds-panel"', page)
+        self.assertLess(page.index('class="template-picker ds-panel"'), page.index('class="source-picker"'))
+        self.assertIn('id="template-description"', page)
+        self.assertIn('Custom text', page)
+
+        expected_controls = {
+            "template-custom": "true",
+            "template-checklist": "false",
+            "template-todo-label": "false",
+            "template-tiny-note": "false",
+            "template-surprise-card": "false",
+        }
+        for element_id, pressed in expected_controls.items():
+            with self.subTest(element_id=element_id):
+                self.assertIn(
+                    f'id="{element_id}" class="ds-button" type="button" '
+                    f'data-template="{element_id.removeprefix("template-")}" '
+                    f'aria-pressed="{pressed}"',
+                    page,
+                )
+        stylesheet = (Path(__file__).resolve().parents[1] / "web" / "static" / "app.css").read_text()
+        self.assertIn(".template-picker__controls [aria-pressed=\"true\"]", stylesheet)
+        self.assertIn("var(--ds-focus-ring)", stylesheet)
+
     def test_index_uses_the_local_win31_theme_structure(self):
         page = self.client.get("/").get_data(as_text=True)
         self.assertIn('data-ds-theme="win31"', page)

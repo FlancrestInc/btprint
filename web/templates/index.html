@@ -16,6 +16,20 @@
 
       <form id="print-form" novalidate>
         <section class="settings ds-panel" aria-label="Print settings">
+          <section class="template-picker ds-panel" aria-labelledby="template-heading">
+            <div class="template-picker__heading">
+              <h2 id="template-heading">Templates</h2>
+              <p id="template-description" aria-live="polite">Custom text</p>
+            </div>
+            <div class="template-picker__controls">
+              <button id="template-custom" class="ds-button" type="button" data-template="custom" aria-pressed="true">Custom</button>
+              <button id="template-checklist" class="ds-button" type="button" data-template="checklist" aria-pressed="false">Checklist</button>
+              <button id="template-todo-label" class="ds-button" type="button" data-template="todo-label" aria-pressed="false">To-do label</button>
+              <button id="template-tiny-note" class="ds-button" type="button" data-template="tiny-note" aria-pressed="false">Tiny note card</button>
+              <button id="template-surprise-card" class="ds-button" type="button" data-template="surprise-card" aria-pressed="false">Surprise mini-card</button>
+            </div>
+          </section>
+
           <fieldset class="source-picker">
             <legend>Source</legend>
             <label><input id="source-image" type="radio" name="source_type" value="image" checked> Image</label>
