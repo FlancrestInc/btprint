@@ -115,6 +115,21 @@ test("Custom preserves the current source and values without scheduling a previe
   for (const button of ui.templateButtons) assert.equal(button.ariaPressed, String(button.id === CUSTOM_TEMPLATE_ID));
 });
 
+test("template clicks do not submit a form or call print", () => {
+  const ui = makeTemplateUi();
+  let submitCalls = 0;
+  let printCalls = 0;
+  const form = { submit() { submitCalls += 1; } };
+  const print = () => { printCalls += 1; };
+  createTemplateController({ ...ui, form, print });
+
+  ui.templateButtons.find((button) => button.id === "checklist").click();
+  ui.templateButtons.find((button) => button.id === CUSTOM_TEMPLATE_ID).click();
+
+  assert.equal(submitCalls, 0);
+  assert.equal(printCalls, 0);
+});
+
 test("preview sends CSRF-protected form data and keeps the old image on error", async () => {
   const ui = makeUi();
   const calls = [];
@@ -214,4 +229,68 @@ test("boot mirrors the printer address into the header target", async () => {
   assert.equal(target.textContent, "AA:BB:CC:DD:EE:FF");
   globalThis.document = originalDocument;
   globalThis.fetch = originalFetch;
+});
+
+test("boot keeps the image workflow working and leaves Image selected for Custom", async () => {
+  const originalDocument = globalThis.document;
+  const originalFetch = globalThis.fetch;
+  const originalFormData = globalThis.FormData;
+  const originalSetTimeout = globalThis.setTimeout;
+  const timers = [];
+  const calls = [];
+  const listeners = {};
+  const input = { value: "20:DC:8B:CD:CA:C0", addEventListener(type, callback) { this[type] = callback; } };
+  const imageFile = { files: [{ name: "photo.png" }] };
+  const sourceImage = { checked: true };
+  const sourceText = { checked: false };
+  const customButton = templateButton(CUSTOM_TEMPLATE_ID);
+  const form = { addEventListener(type, callback) { listeners[type] = callback; } };
+  const controls = {
+    "#print-form": form, "#printer-address": input, "#printer-target": { textContent: "" },
+    "#image-controls": { hidden: false, querySelectorAll: () => [{ disabled: false }] },
+    "#text-controls": { hidden: true, querySelectorAll: () => [{ disabled: true }] },
+    "#image-file": imageFile, "#image-filename": { textContent: "No file selected" },
+    "#source-image": sourceImage, "#source-text": sourceText,
+    "#preview": { hidden: true }, "#print-button": { disabled: false },
+    "#status": { textContent: "", dataset: {}, classList: { toggle() {} } },
+    "#dither": { checked: false }, "#bold": { checked: false },
+    "#template-description": { textContent: "" }, "#text-input": { value: "" },
+    "#font-size": { value: "24" }, "#alignment": { value: "left" },
+  };
+  try {
+    globalThis.document = {
+      querySelector: (selector) => controls[selector],
+      querySelectorAll: (selector) => (selector === "[data-template]" ? [customButton] : []),
+    };
+    globalThis.FormData = class { set() {} };
+    globalThis.setTimeout = (callback, delay) => { timers.push({ callback, delay }); return timers.length; };
+    globalThis.fetch = async (url) => {
+      calls.push(url);
+      if (url === "/csrf-token") return response({ json: { csrf_token: "token" } });
+      if (url === "/preview") return response({ blob: "preview" });
+      if (url === "/print") return response({ status: 202, json: { job_id: "job-1" } });
+      return response({ json: { state: "complete" } });
+    };
+    await import(`../web/static/app.mjs?image-workflow=${Date.now()}`);
+
+    listeners.change({ target: imageFile });
+    assert.equal(controls["#image-filename"].textContent, "photo.png");
+    assert.deepEqual(timers.map(({ delay }) => delay), [250]);
+    await timers[0].callback();
+    assert.deepEqual(calls, ["/csrf-token", "/preview"]);
+
+    listeners.submit({ preventDefault() {} });
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(calls, ["/csrf-token", "/preview", "/print"]);
+    customButton.click();
+    assert.equal(sourceImage.checked, true);
+    assert.equal(sourceText.checked, false);
+    assert.equal(controls["#template-description"].textContent, "Custom text");
+  } finally {
+    globalThis.document = originalDocument;
+    globalThis.fetch = originalFetch;
+    globalThis.FormData = originalFormData;
+    globalThis.setTimeout = originalSetTimeout;
+  }
 });
