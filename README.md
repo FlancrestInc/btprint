@@ -45,7 +45,7 @@ weight.
 
 ### Text templates
 
-The text view starts on **Custom**. It also has four built-in local presets:
+The template picker starts on **Custom**. It also has four built-in local presets:
 **Checklist**, **To-do label**, **Tiny note card**, and **Surprise mini-card**.
 Choose one to switch to Text and fill the normal text, size, alignment, and
 bold controls. The preset is only a starting point: edit any of those fields
