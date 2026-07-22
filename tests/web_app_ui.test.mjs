@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createPrintController, createTemplateController } from "../web/static/app.mjs";
@@ -68,6 +69,17 @@ test("template definitions expose the approved editable presets", () => {
   ]);
   assert.equal(getTemplate("tiny-note"), TEMPLATES[2]);
   assert.equal(getTemplate("missing"), undefined);
+});
+
+test("rendered template buttons use the shared template keys and titles", async () => {
+  const markup = await readFile(new URL("../web/templates/index.html", import.meta.url), "utf8");
+  const buttons = [...markup.matchAll(/<button[^>]*data-template="([^"]+)"[^>]*>([^<]+)<\/button>/g)]
+    .map(([, id, label]) => ({ id, label: label.trim() }));
+
+  assert.deepEqual(buttons, [
+    { id: CUSTOM_TEMPLATE_ID, label: "Custom" },
+    ...TEMPLATES.map(({ id, title }) => ({ id, label: title })),
+  ]);
 });
 
 test("each preset switches to text, applies fields, and schedules one preview", () => {
