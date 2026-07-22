@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createPrintController } from "../web/static/app.mjs";
+import { createPrintController, createTemplateController } from "../web/static/app.mjs";
+import { CUSTOM_TEMPLATE_ID, TEMPLATES, getTemplate } from "../web/static/templates.mjs";
 
 function response({ ok = true, status = 200, json, blob } = {}) {
   return { ok, status, json: async () => json, blob: async () => blob };
@@ -15,6 +16,104 @@ function makeUi() {
     status: { textContent: "", dataset: {}, classList: { toggle() {} } },
   };
 }
+
+function templateButton(id) {
+  return {
+    id,
+    dataset: { template: id },
+    ariaPressed: "false",
+    listeners: {},
+    addEventListener(type, callback) { this.listeners[type] = callback; },
+    click() { this.listeners.click?.(); },
+  };
+}
+
+function makeTemplateUi() {
+  const sourceImage = { checked: true };
+  const sourceText = { checked: false };
+  const textInput = { value: "Keep this text" };
+  const fontSize = { value: "18" };
+  const alignment = { value: "right" };
+  const bold = { checked: false };
+  const imageControl = { disabled: false };
+  const textControl = { disabled: true };
+  const buttons = [
+    templateButton(CUSTOM_TEMPLATE_ID),
+    ...TEMPLATES.map((template) => templateButton(template.id)),
+  ];
+  let showSourceCalls = 0;
+  let scheduleCalls = 0;
+  return {
+    sourceImage, sourceText, textInput, fontSize, alignment, bold, templateButtons: buttons,
+    description: { textContent: "" },
+    imageControl, textControl,
+    showSource() {
+      showSourceCalls += 1;
+      imageControl.disabled = !sourceImage.checked;
+      textControl.disabled = sourceImage.checked;
+    },
+    schedulePreview() { scheduleCalls += 1; },
+    showSourceCalls: () => showSourceCalls,
+    scheduleCalls: () => scheduleCalls,
+  };
+}
+
+test("template definitions expose the approved editable presets", () => {
+  assert.equal(CUSTOM_TEMPLATE_ID, "custom");
+  assert.deepEqual(TEMPLATES, [
+    { id: "checklist", text: "CHECKLIST\n[ ] First task\n[ ] Second task\n[ ] Done", fontSize: 24, alignment: "left", bold: true, description: "A short list you can finish." },
+    { id: "todo-label", text: "TO DO\nWhat needs doing?", fontSize: 32, alignment: "center", bold: true, description: "A bold label for one task." },
+    { id: "tiny-note", text: "A tiny note for you.", fontSize: 24, alignment: "left", bold: false, description: "A small note with room for your words." },
+    { id: "surprise-card", text: "SURPRISE!\nYou are doing great.", fontSize: 28, alignment: "center", bold: true, description: "A cheerful mini-card." },
+  ]);
+  assert.equal(getTemplate("tiny-note"), TEMPLATES[2]);
+  assert.equal(getTemplate("missing"), undefined);
+});
+
+test("each preset switches to text, applies fields, and schedules one preview", () => {
+  for (const template of TEMPLATES) {
+    const ui = makeTemplateUi();
+    createTemplateController(ui);
+    ui.templateButtons.find((button) => button.id === template.id).click();
+
+    assert.equal(ui.sourceImage.checked, false, template.id);
+    assert.equal(ui.sourceText.checked, true, template.id);
+    assert.equal(ui.showSourceCalls(), 1, template.id);
+    assert.equal(ui.imageControl.disabled, true, template.id);
+    assert.equal(ui.textControl.disabled, false, template.id);
+    assert.equal(ui.textInput.value, template.text, template.id);
+    assert.equal(ui.fontSize.value, String(template.fontSize), template.id);
+    assert.equal(ui.alignment.value, template.alignment, template.id);
+    assert.equal(ui.bold.checked, template.bold, template.id);
+    assert.equal(ui.description.textContent, template.description, template.id);
+    assert.equal(ui.scheduleCalls(), 1, template.id);
+    for (const button of ui.templateButtons) assert.equal(button.ariaPressed, String(button.id === template.id), `${template.id}: ${button.id}`);
+  }
+});
+
+test("Custom preserves the current source and values without scheduling a preview", () => {
+  const ui = makeTemplateUi();
+  ui.sourceImage.checked = false;
+  ui.sourceText.checked = true;
+  ui.textInput.value = "An edited note";
+  ui.fontSize.value = "27";
+  ui.alignment.value = "center";
+  ui.bold.checked = true;
+  createTemplateController(ui);
+
+  ui.templateButtons.find((button) => button.id === CUSTOM_TEMPLATE_ID).click();
+
+  assert.equal(ui.sourceImage.checked, false);
+  assert.equal(ui.sourceText.checked, true);
+  assert.equal(ui.textInput.value, "An edited note");
+  assert.equal(ui.fontSize.value, "27");
+  assert.equal(ui.alignment.value, "center");
+  assert.equal(ui.bold.checked, true);
+  assert.equal(ui.showSourceCalls(), 0);
+  assert.equal(ui.scheduleCalls(), 0);
+  assert.equal(ui.description.textContent, "Custom text");
+  for (const button of ui.templateButtons) assert.equal(button.ariaPressed, String(button.id === CUSTOM_TEMPLATE_ID));
+});
 
 test("preview sends CSRF-protected form data and keeps the old image on error", async () => {
   const ui = makeUi();

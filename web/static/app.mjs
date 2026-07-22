@@ -1,3 +1,5 @@
+import { CUSTOM_TEMPLATE_ID, getTemplate } from "./templates.mjs";
+
 const TERMINAL_STATES = new Set(["complete", "failed"]);
 
 function errorMessage(response, fallback) {
@@ -104,6 +106,54 @@ export function createPrintController({
   return { preview: previewReceipt, schedulePreview, print: printReceipt };
 }
 
+export function createTemplateController({
+  templateButtons,
+  description,
+  sourceImage,
+  sourceText,
+  textInput,
+  fontSize,
+  alignment,
+  bold,
+  showSource,
+  schedulePreview,
+}) {
+  const setSelectedTemplate = (selectedId) => {
+    templateButtons.forEach((button) => {
+      const pressed = String(button.dataset.template === selectedId);
+      if (typeof button.setAttribute === "function") button.setAttribute("aria-pressed", pressed);
+      else button.ariaPressed = pressed;
+    });
+  };
+
+  const applyTemplate = (id) => {
+    if (id === CUSTOM_TEMPLATE_ID) {
+      setSelectedTemplate(id);
+      description.textContent = "Custom text";
+      return;
+    }
+
+    const template = getTemplate(id);
+    if (!template) return;
+    sourceImage.checked = false;
+    sourceText.checked = true;
+    showSource();
+    textInput.value = template.text;
+    fontSize.value = String(template.fontSize);
+    alignment.value = template.alignment;
+    bold.checked = template.bold;
+    setSelectedTemplate(id);
+    description.textContent = template.description;
+    schedulePreview();
+  };
+
+  templateButtons.forEach((button) => {
+    button.addEventListener("click", () => applyTemplate(button.dataset.template));
+  });
+
+  return { applyTemplate };
+}
+
 function boot() {
   const form = document.querySelector("#print-form");
   if (!form) return;
@@ -112,6 +162,7 @@ function boot() {
   const imageFile = document.querySelector("#image-file");
   const imageFilename = document.querySelector("#image-filename");
   const sourceImage = document.querySelector("#source-image");
+  const sourceText = document.querySelector("#source-text");
   const printerAddress = document.querySelector("#printer-address");
   const printerTarget = document.querySelector("#printer-target");
   const controller = createPrintController({ form, preview: document.querySelector("#preview"), printButton: document.querySelector("#print-button"), status: document.querySelector("#status"), dither: document.querySelector("#dither"), bold: document.querySelector("#bold") });
@@ -134,6 +185,23 @@ function boot() {
   printerAddress.addEventListener("input", syncPrinterTarget);
   syncPrinterTarget();
   showSource();
+
+  const templateButtons = [...(document.querySelectorAll?.("[data-template]") || [])];
+  const templateDescription = document.querySelector("#template-description");
+  if (templateButtons.length && templateDescription) {
+    createTemplateController({
+      templateButtons,
+      description: templateDescription,
+      sourceImage,
+      sourceText,
+      textInput: document.querySelector("#text-input"),
+      fontSize: document.querySelector("#font-size"),
+      alignment: document.querySelector("#alignment"),
+      bold: document.querySelector("#bold"),
+      showSource,
+      schedulePreview: controller.schedulePreview,
+    });
+  }
 }
 
 if (typeof document !== "undefined") boot();
